@@ -1,0 +1,80 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8" />
+<title>Time Tracker App</title>
+
+<link th:rel="stylesheet"
+	th:href="@{assets/bootstrap-datepicker/css/bootstrap-datepicker.css}" />
+<link th:rel="stylesheet"
+	th:href="@{assets/bootstrap-datepicker/css/bootstrap-datepicker.standalone.css}" />
+<link th:rel="stylesheet"
+	th:href="@{webjars/bootstrap/4.0.0-2/css/bootstrap.min.css} " />
+<link th:rel="stylesheet"
+	th:href="@{webjars/font-awesome/5.11.2/css/all.css} " />
+</head>
+<body>
+
+	<!-- Navigation -->
+	<nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+		<div class="container" align="center">
+			<ul>
+				<a class="navbar-brand" href="/">Add Time Tracking</a>
+				<br/>
+				<a class="navbar-brand" href="/timetracker">Search	Time Tracker</a>
+			</ul>
+		</div>
+	</nav>
+
+	<div class="container">
+		<form method="post" th:object="${empDetails}" id="add-time-form">
+			<div class="form-group">
+				<div class="col-md-4 mt-5">
+					<label for="startDate">Work Start Time</label>
+					<div class="input-group date">
+						<input type="datetime-local" placeholder="startDate"
+							class="form-control" id="startDate" autocomplete="off"
+							th:field="*{startDate}" required="required" />
+						<div class="input-group-append">
+							<span class="input-group-text"><i class="text"></i></span>
+						</div>
+					</div>
+					<label for="endDate">Work End Time</label>
+					<div class="input-group date">
+						<input type="datetime-local" placeholder="endDate"
+							class="form-control" id="endDate" autocomplete="off"
+							th:field="*{endDate}" required="required" />
+						<div class="input-group-append">
+							<span class="input-group-text"><i class="text"></i></span>
+						</div>
+					</div>
+					<label for="emailAddress">Email Address</label>
+					<div class="input-group date">
+						<input type="text" placeholder="Email" class="form-control"
+							id="emailAddress" autocomplete="off" th:field="*{emailAddress}"
+							required="required" />
+						<div class="input-group-append">
+							<span class="input-group-text"><i class="text"></i></span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<button class="btn btn-primary" type="submit"
+				id="add-time-submit-btn">Add Time</button>
+			<button class="btn btn-primary" type="submit" id="add-time-clear-btn">Clear</button>
+			<div id="feedback"></div>
+		</form>
+
+	</div>
+
+
+	<script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+	<script th:src="@{/webjars/popper.js/umd/popper.min.js}"></script>
+	<script th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>
+	<script
+		th:src="@{assets/bootstrap-datepicker/js/bootstrap-datepicker.js}"></script>
+	<script th:src="@{assets/addTime.js}"></script>
+
+</body>
+</html>

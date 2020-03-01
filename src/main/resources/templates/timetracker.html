@@ -1,0 +1,71 @@
+<!DOCTYPE HTML>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8" />
+<title>Search Time Tracker</title>
+
+	<link th:rel="stylesheet" th:href="@{assets/bootstrap-datepicker/css/bootstrap-datepicker.css}" />
+	<link th:rel="stylesheet" th:href="@{assets/bootstrap-datepicker/css/bootstrap-datepicker.standalone.css}" />
+	<link th:rel="stylesheet" th:href="@{webjars/bootstrap/4.0.0-2/css/bootstrap.min.css} " />
+	<link th:rel="stylesheet" th:href="@{webjars/font-awesome/5.11.2/css/all.css} " />
+    <link th:rel="stylesheet" th:href="@{assets/datatable/datatables.css}"/>
+    <link th:rel="stylesheet" th:href="@{webjars/bootstrap/4.0.0-2/css/bootstrap.min.css} "/>
+</head>
+<body>
+
+	<!-- Navigation -->
+	<nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
+		<div class="container" align="center">
+			<ul>
+				<a class="navbar-brand" href="/">Add Time Tracking</a>
+				<br/>
+				<a class="navbar-brand" href="/timetracker">Search	Time Tracker</a>
+			</ul>
+		</div>
+	</nav>
+
+	<div class="container">
+		<form method="get" id="search-time-form">
+			<div class="form-group">
+				<div class="col-md-4 mt-5">
+					<label for="emailAddress">Email Address</label>
+					<div class="input-group date">
+						<input type="text" placeholder="Email" class="form-control"
+							id="emailAddress" autocomplete="off" th:field="*{emailAddress}" required="required" />
+						<div class="input-group-append">
+							<span class="input-group-text"><i class="text"></i></span>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<button class="btn btn-primary" type="submit"
+				id="search-time-submit-btn">Search</button>
+			<div id="feedback"></div>
+		</form>
+
+		<br> <br>
+		<div id="searchDetails">
+			<h1>Time Tracker Search Details</h1>
+			<table id="timeTrackerDetailsTable" class="display">
+
+				<!-- Header Table -->
+				<thead>
+					<tr>
+						<th>Start Date</th>
+						<th>End Date</th>
+						<th>Email</th>
+					</tr>
+				</thead>
+			</table>
+
+		</div>
+
+		<script th:src="@{/webjars/jquery/jquery.min.js}"></script>
+		<script th:src="@{/webjars/popper.js/umd/popper.min.js}"></script>
+		<script th:src="@{/webjars/bootstrap/js/bootstrap.min.js}"></script>
+		<script	th:src="@{assets/bootstrap-datepicker/js/bootstrap-datepicker.js}"></script>
+		<script th:src="@{assets/datatable/datatables.js}"></script>
+		<script th:src="@{assets/search.js}"></script>
+</body>
+</html>
