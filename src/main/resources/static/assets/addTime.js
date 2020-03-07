@@ -22,6 +22,12 @@ $(document).ready(function() {
 			dataType : 'json',
 			cache : false,
 			timeout : 600000,
+			success:function(){
+				$("#startDate").val("");
+				$("#endDate").val("");
+				$("#emailAddress").val("");
+				$('#feedback').html("");
+			},
 			error : function(e) {
 				var json = "<h4><pre>" + e.responseText + "</pre>";
 				$('#feedback').html(json);

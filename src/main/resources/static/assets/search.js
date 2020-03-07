@@ -29,7 +29,7 @@ $(document).ready(function() {
 							cache : false,
 							timeout : 600000,
 							success : function(data) {
-								
+								$('#feedback').html("");
 								$('#timeTrackerDetailsTable').DataTable({
 							        "processing": false,
 							        "serverSide": false,
