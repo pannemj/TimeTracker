@@ -1,15 +1,35 @@
 package com.allianz.tracker.service.impl;
 
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
+import org.json.JSONException;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+import org.springframework.util.StringUtils;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import com.allianz.tracker.dto.TimeTrackerDto;
+import com.allianz.tracker.dto.TimeTrackerLegacyDto;
+import com.allianz.tracker.exception.TimeTrackerAppException;
 import com.allianz.tracker.mapper.TimeTrackerMapper;
 import com.allianz.tracker.model.TimeTrackerModel;
 import com.allianz.tracker.service.TimeTrackerService;
@@ -23,7 +43,36 @@ public class TimeTrackerServiceImpl implements TimeTrackerService {
 	@Autowired
 	private TimeTrackerMapper timeTrackerMapper;
 
-	private final Map<String, List<TimeTrackerDto>> records = new HashMap<>();
+	@Autowired
+	@Qualifier("appRestTemplate")
+	private RestTemplate restTemplate;
+
+	@Value("${allianz.add.time.tracker.service.url}")
+	private String addTimeTrackerLegacyServiceApiUrl;
+
+	@Value("${allianz.get.time.tracker.service.url}")
+	private String getTimeTrackerLegacyServiceApiUrl;
+
+	/**
+	 * @return
+	 */
+	private HttpHeaders getRequiredHttpHeaders() {
+		HttpHeaders requestheaders = new HttpHeaders();
+		requestheaders.setContentType(MediaType.APPLICATION_JSON);
+		requestheaders.setAccept(Arrays.asList(MediaType.APPLICATION_JSON));
+		return requestheaders;
+	}
+
+	/**
+	 * @param timeTrackerDto
+	 * @return
+	 */
+	private String populateRequestURI(TimeTrackerModel timeTrackerModel) {
+		StringBuilder builder = new StringBuilder(addTimeTrackerLegacyServiceApiUrl);
+		builder.append("?start=").append(timeTrackerModel.getStart()).append("?end=").append(timeTrackerModel.getEnd())
+				.append("?email=").append(timeTrackerModel.getEmailAddress());
+		return builder.toString();
+	}
 
 	/**
 	 * @param timeTrackerDto
@@ -31,57 +80,144 @@ public class TimeTrackerServiceImpl implements TimeTrackerService {
 	 */
 	@Override
 	public void recordTimeTrack(TimeTrackerModel timeTrackerModel) {
-		TimeTrackerDto timeTrackerDto = timeTrackerMapper.toTimeTrackerDto(timeTrackerModel);
-		List<TimeTrackerDto> empTimeRecords = records.computeIfAbsent(timeTrackerDto.getEmailAddress(),
-				timeTrackerRecord -> new ArrayList<>());
-		empTimeRecords.add(timeTrackerDto);
-		records.put(timeTrackerDto.getEmailAddress(), empTimeRecords);
+		try {
+			HashMap<String, String> urlParams = new HashMap<>(3);
+			urlParams.put("email", timeTrackerModel.getEmailAddress());
+			urlParams.put("start", timeTrackerModel.getStartDate());
+			urlParams.put("end", timeTrackerModel.getEndDate());
+
+			JSONObject createTimeTrackWrapperRequest = new JSONObject();
+			HttpHeaders httpHeaders = getRequiredHttpHeaders();
+			HttpEntity<String> request = new HttpEntity<>(createTimeTrackWrapperRequest.toString(), httpHeaders);
+			ResponseEntity<Object> addTimeTrackerresponse = null;
+			String url = addTimeTrackerLegacyServiceApiUrl;
+			String bsURL = UriComponentsBuilder.fromUriString(url).buildAndExpand(urlParams).toUri().toURL().toString();
+
+			log.debug(
+					"Inside TimeTrackerServiceImpl.recordTimeTrack() Request Details --> \n addTimeTrackerLegacyApiUrl={},\n requestHeaders={},\n request={}",
+					bsURL, httpHeaders.toSingleValueMap(), request);
+
+			addTimeTrackerresponse = restTemplate.exchange(url, HttpMethod.POST, request, Object.class, urlParams);
+
+			if (HttpStatus.OK.equals(addTimeTrackerresponse.getStatusCode())) {
+				log.debug("Inside TimeTrackerServiceImpl.recordTimeTrack() Response Received -->\n {}",
+						addTimeTrackerresponse.getBody());
+			} else {
+				throw new TimeTrackerAppException(addTimeTrackerresponse.getBody().toString());
+			}
+
+		} catch (HttpClientErrorException | HttpServerErrorException e) {
+			log.error("HttpClientErrorException or HttpServerErrorException in calling Add Time Tracker Legacy Service",
+					e.getMessage(), e);
+			throw new TimeTrackerAppException(e.getResponseBodyAsString());
+		} catch (RestClientException e) {
+			log.error("RestClientException in calling Add Time Tracker Legacy Service ", e.getMessage(), e);
+			throw new TimeTrackerAppException(e.getMessage());
+
+		} catch (JSONException e) {
+			log.error("JSONException in calling Add Time Tracker Legacy Service ", e.getMessage(), e);
+			throw new TimeTrackerAppException(e.getMessage());
+		} catch (MalformedURLException e) {
+			log.error("MalformedURLException in calling Add Time Tracker Legacy Service ", e.getMessage(), e);
+			throw new TimeTrackerAppException(e.getMessage());
+		}
+
 	}
 
 	@Override
 	public List<TimeTrackerDto> getEmployeeTimeTrackDetails(String emailId, int offset, int length) {
-		List<TimeTrackerDto> timetrackRecords = (emailId == null) ? findAll() : findByEmailAddress(emailId);
-		return filterRecords(timetrackRecords, offset, length);
-	}
+		List<TimeTrackerDto> timetrackRecords = new ArrayList<>();
+		HttpEntity<String> request = null;
+		ResponseEntity<List<TimeTrackerLegacyDto>> timeTrackerLegacyResponse = null;
+		String bsURL = null;
+		HashMap<String, String> urlParams = getUrlParamsMap(offset, length);
+		HttpHeaders headers = getRequiredHttpHeaders();
+		StringBuilder builder = new StringBuilder(getTimeTrackerLegacyServiceApiUrl);
 
-	/**
-	 * @param email
-	 * @return
-	 */
-	private List<TimeTrackerDto> findByEmailAddress(String email) {
-		List<TimeTrackerDto> allEmpTimeTrackerRecords = null;
+		try {
 
-		if (records.containsKey(email)) {
-			allEmpTimeTrackerRecords = records.get(email);
-		} else {
-			allEmpTimeTrackerRecords = records.getOrDefault(email, new ArrayList<TimeTrackerDto>());
+			if (!StringUtils.isEmpty(emailId)) {
+				builder.append("&email=").append(emailId);
+			}
+
+			bsURL = UriComponentsBuilder.fromUriString(builder.toString()).buildAndExpand(urlParams).toUri().toURL()
+					.toString();
+			request = new HttpEntity<>(headers);
+
+			log.debug(
+					"Inside TimeTrackerServiceImpl.getEmployeeTimeTrackDetails()()--> Request Details \n  "
+							+ "emailId={},\n offset={},\n length={},\n bsURL={},\n request={} ",
+					emailId, offset, length, bsURL, request);
+
+			timeTrackerLegacyResponse = restTemplate.exchange(builder.toString(), HttpMethod.GET, request,
+					new ParameterizedTypeReference<List<TimeTrackerLegacyDto>>() {
+					}, urlParams);
+
+			if (HttpStatus.OK.equals(timeTrackerLegacyResponse.getStatusCode())) {
+
+				log.debug("Inside TimeTrackerServiceImpl.getEmployeeTimeTrackDetails() Response --> {}",
+						timeTrackerLegacyResponse.getBody());
+
+				List<TimeTrackerLegacyDto> timeTrackerLegacyDtoResponseList = timeTrackerLegacyResponse.getBody();
+
+				timetrackRecords = populateTimetrackRecords(timeTrackerLegacyDtoResponseList);
+			}
+
+		} catch (HttpClientErrorException | HttpServerErrorException e) {
+			log.error(
+					"HttpClientErrorException or HttpServerErrorException in fetching Time Tracker details From Legacy Time Tracker Service",
+					e.getMessage(), e);
+
+			throw new TimeTrackerAppException((e.getResponseBodyAsString()));
+
+		} catch (RestClientException e) {
+			log.error("RestClientException in fetching Time Tracker details From Legacy Time Tracker Service",
+					e.getMessage(), e);
+			throw new TimeTrackerAppException(e.getMessage());
+		} catch (JSONException e) {
+			log.error("JSONException in fetching Time Tracker details From Legacy Time Tracker Service", e.getMessage(),
+					e);
+			throw new TimeTrackerAppException(e.getMessage());
+		} catch (MalformedURLException e) {
+			log.error("MalformedURLException in fetching Time Tracker details From Legacy Time Tracker Service",
+					e.getMessage(), e);
+			throw new TimeTrackerAppException(e.getMessage());
 		}
 
-		return allEmpTimeTrackerRecords;
+		return timetrackRecords;
 	}
 
 	/**
+	 * @param timeTrackerLegacyDtoResponseList
 	 * @return
 	 */
-	private List<TimeTrackerDto> findAll() {
-		List<TimeTrackerDto> allEmpTimeTrackerRecords = new ArrayList<>();
+	private List<TimeTrackerDto> populateTimetrackRecords(List<TimeTrackerLegacyDto> timeTrackerLegacyDtoResponseList) {
+		List<TimeTrackerDto> timeTrackerDtoList = new ArrayList<>();
 
-		records.forEach((k, v) -> {
-			allEmpTimeTrackerRecords.addAll(v);
-		});
+		if (!CollectionUtils.isEmpty(timeTrackerLegacyDtoResponseList)) {
+			timeTrackerLegacyDtoResponseList.forEach(timeTrackerLegacyDto -> {
+				
+				if(timeTrackerLegacyDto != null) {
+					timeTrackerDtoList.add(timeTrackerMapper.toTimeTrackerDto(timeTrackerLegacyDto));
+				}
+				
+			});
+		}
 
-		return allEmpTimeTrackerRecords;
+		return timeTrackerDtoList;
 	}
 
 	/**
-	 * @param timetrackRecords
+	 * @param emailId
 	 * @param offset
 	 * @param length
 	 * @return
 	 */
-	private List<TimeTrackerDto> filterRecords(List<TimeTrackerDto> timetrackRecords, int offset, int length) {
-		TimeTrackerDto[] timeTrackerDtoRecords = timetrackRecords.toArray(new TimeTrackerDto[1]);
-		return Arrays.asList(Arrays.copyOfRange(timeTrackerDtoRecords, offset,
-				(length == -1) ? timeTrackerDtoRecords.length : (offset + length)));
+	private HashMap<String, String> getUrlParamsMap(int offset, int length) {
+		HashMap<String, String> urlParams = new HashMap<>(2);
+		urlParams.put("OffSet", Integer.toString(offset));
+		urlParams.put("Length", Integer.toString(length));
+		return urlParams;
 	}
+
 }

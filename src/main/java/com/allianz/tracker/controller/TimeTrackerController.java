@@ -1,9 +1,5 @@
 package com.allianz.tracker.controller;
 
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.List;
 
 import javax.validation.Valid;
@@ -20,9 +16,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.allianz.tracker.dto.TimeTrackerDto;
-import com.allianz.tracker.exception.TimeTrackerBadDataException;
 import com.allianz.tracker.model.TimeTrackerModel;
 import com.allianz.tracker.service.TimeTrackerService;
+import com.allianz.tracker.util.DateUtils;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -45,6 +41,9 @@ public class TimeTrackerController {
 	@Autowired
 	private TimeTrackerService timeTrackerService;
 
+	@Autowired
+	private DateUtils dateUtils;
+
 	/**
 	 * @param emailId
 	 * @param offset
@@ -55,7 +54,7 @@ public class TimeTrackerController {
 	public ResponseEntity<List<TimeTrackerDto>> get(@RequestParam(name = "emailId", required = false) String emailId,
 			@RequestParam(name = "offset", defaultValue = "0", required = false) int offset,
 			@RequestParam(name = "length", defaultValue = "-1", required = false) int length) {
-		List<TimeTrackerDto> result =timeTrackerService.getEmployeeTimeTrackDetails(emailId, offset, length);
+		List<TimeTrackerDto> result = timeTrackerService.getEmployeeTimeTrackDetails(emailId, offset, length);
 		return new ResponseEntity<>(result, HttpStatus.OK);
 	}
 
@@ -74,24 +73,10 @@ public class TimeTrackerController {
 	 * @param timeTrackerModel
 	 */
 	private void validateModel(TimeTrackerModel timeTrackerModel) {
-	        Date startDate = parseDateField(timeTrackerModel.getStartDate(),"startDate");
-	        Date endDate = parseDateField(timeTrackerModel.getEndDate(),"endDate");
-	        SimpleDateFormat simpleDateFormat = new SimpleDateFormat("dd.MM.yyyy hh:mm");
-	        timeTrackerModel.setStartDate(simpleDateFormat.format(startDate));
-	        timeTrackerModel.setEndDate(simpleDateFormat.format(endDate));
+		timeTrackerModel.setStartDate(dateUtils.parseToBackendDateFormat(timeTrackerModel.getStartDate(), "startDate"));
+		timeTrackerModel.setEndDate(dateUtils.parseToBackendDateFormat(timeTrackerModel.getEndDate(), "endDate"));
+		timeTrackerModel.setStart(dateUtils.parseToBackendDate(timeTrackerModel.getStartDate(), "startDate"));
+		timeTrackerModel.setEnd(dateUtils.parseToBackendDate(timeTrackerModel.getEndDate(), "endDate"));
 	}
-
-	private Date parseDateField(String dateValue , String field) {
-		DateFormat formatter = new SimpleDateFormat("yyyy-MM-dd'T'hh:mm");
-		Date date = null;
-		try {
-			date = formatter.parse(dateValue);
-        } catch (ParseException e) {
-            throw new TimeTrackerBadDataException("Please enter "+field+ " in valid date formate");
-        }
-		
-		return date;
-	}
-	
 
 }

@@ -14,22 +14,23 @@ import lombok.ToString;
 @AllArgsConstructor
 @NoArgsConstructor
 @JsonInclude(Include.NON_NULL)
-@ToString
-public class TimeTrackerDto {
-
+@ToString	
+public class TimeTrackerLegacyDto {
+	
+	
 	/**
 	 * The Start Date
 	 */
-	private String startDate;
+	private String start;
 
 	/**
 	 * The End Date.
 	 */
-	private String endDate;
+	private String end;
 
 	/**
 	 * The Email Address.
 	 */
-	private String emailAddress;
+	private String email;
 
 }

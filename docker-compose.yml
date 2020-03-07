@@ -1,0 +1,34 @@
+version: '2.2'
+
+networks:
+  time-tracker-network:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.16.238.0/24
+
+services:
+  frontend:
+    build: .
+    ports:
+      - 8085:8085
+    environment:
+      TIME-TRACKER-LEGACY-APP-URL: "http://172.16.238.2:8080"
+    networks:
+      - time-tracker-network
+    dns: 172.16.238.2
+    depends_on:
+      - backend
+ 
+  backend: 
+    image: alirizasaral/timetracker:1
+    expose:
+      - 8080
+    ports:
+      - 8080:8080
+    networks:
+      time-tracker-network:
+        ipv4_address: 172.16.238.2
+  
+

@@ -14,10 +14,20 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import com.allianz.tracker.exception.TimeTrackerAppException;
 import com.allianz.tracker.exception.TimeTrackerBadDataException;
 
 @RestControllerAdvice
 public class TimeTrackerExceptionHandler extends ResponseEntityExceptionHandler {
+
+	/**
+	 * @param e
+	 * @return
+	 */
+	@ExceptionHandler(TimeTrackerAppException.class)
+	public ResponseEntity<Object> handleTimeTrackerApp(TimeTrackerAppException e, HttpServletRequest request) {
+		return new ResponseEntity<>(e.getUserMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+	}
 
 	/**
 	 * @param e
