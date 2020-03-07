@@ -72,18 +72,11 @@ mvn clean install -Dmaven.test.skip=true for skipping test.
 
 Install Docker on your machine.
 
-If you want to pull the docker image for this application use
+You can run this application with the below commands:
+ 1. docker-compose build
+ 2. docker-compose -f docker-compose.yml -p TimeTrackerApp up
 
-docker pull pannemj/timetracker:1
-
-TO create a Docker image you have to use docker build command by Dockerfile.
-
-docker build -t pannemj/timetracker:1 .
-
-to run created Docker image with different port use -P with docker run.
-and use -d for background process.
-
-docker run -d -p "127.0.0.1:8085":8085 pannemj/timetracker:1
+This application uses alirizasaral/timetracker:1 docker image as its backend.
 
 To check running container logs use below command.
 
